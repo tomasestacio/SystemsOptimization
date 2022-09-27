@@ -1,8 +1,6 @@
 import os
-import csv
 import glob
 import pandas as pd
-from asyncore import write
 
 testcases_path = '/Users/joaomena/Documents/test_cases/'
 
@@ -36,15 +34,15 @@ def tasks_parser(path):
     This way, the tasks would be represented with the following structure:    
 
 168744: {   #index
-        'tasks': nan,
-        'name': 'tET13',
-        'duration': 3,
-        'period': 2000,
-        'type': 'ET',
-        'priority': 5,
-        'deadline': 1710}
+            'tasks': nan,
+            'name': 'tET13',
+            'duration': 3,
+            'period': 2000,
+            'type': 'ET',
+            'priority': 5,
+            'deadline': 1710}
         }
-        
+
     """
 
     return df
