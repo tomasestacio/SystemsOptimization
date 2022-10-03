@@ -4,6 +4,15 @@ import pandas as pd
 
 testcases_path = '/Users/joaomena/Documents/test_cases/'
 
+class Task:
+    def __init__(self, task_dict):
+        self.name = task_dict['name']
+        self.duration = task_dict['duration']
+        self.period = task_dict['period']
+        self.type = task_dict['type']
+        self.priority = task_dict['priority']
+        self.deadline = task_dict['deadline']
+
 def tasks_parser(path):
     """
     get all tasks from the .csv files in the testcases folder
@@ -21,34 +30,17 @@ def tasks_parser(path):
 
     df.to_csv(f'{testcases_path}/tasks.csv', index=False) #export dataframe to single .csv file
 
-    df = pd.read_csv(f'{testcases_path}/tasks.csv', sep=';') #read single .csv file and separate columns by ';'
+    df = pd.read_csv(f'{testcases_path}/tasks.csv', sep=';').to_dict(orient="index") #read single .csv file and separate columns by ';'
 
     #redundancy caused by inability to separate columns directly on first read - hopefully can be fixed later
+    task_list = []
+    for task in df:
+        task_list.append(Task(df[task]))
 
-    """
-
-    For an easier manipulation of the data we can convert the dataframe to a dictionary structure by replacing line 26 with the following line:
-
-    df = pd.read_csv(f'{testcases_path}/tasks.csv', sep=';').to_dict(orient="index")
-
-    This way, the tasks would be represented with the following structure:    
-
-168744: {   #index
-            'tasks': nan,
-            'name': 'tET13',
-            'duration': 3,
-            'period': 2000,
-            'type': 'ET',
-            'priority': 5,
-            'deadline': 1710}
-        }
-
-    """
-
-    return df
+    return task_list
 
 def main():
-    task_list = tasks_parser(testcases_path)
+    task_list = tasks_parser(testcases_path) #creates list with an object Task for every task in  the csv files
 
 if __name__ == "__main__":
     main()
