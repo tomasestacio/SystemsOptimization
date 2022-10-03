@@ -15,21 +15,21 @@ class Task:
 
 def tasks_parser(path):
     """
-    get all tasks from the .csv files in the testcases folder
+    get all tasks from the .csv files in the testcases folder and return them as objects in a list
     Arguments:
         (string) path - path to folder
     Returns:
-        (class 'pandas.core.frame.DataFrame') df - dataframe with all tasks
+        (list) task_list - list with all tasks as Task objects
     """
 
-    join_files = os.path.join(f"{testcases_path}/*/*.csv") #join all test case .csv files
+    join_files = os.path.join(f"{path}/*/*.csv") #join all test case .csv files
     joined_list = glob.glob(join_files)
 
     df = pd.concat(map(pd.read_csv, joined_list), ignore_index=True) #read all .csv files into dataframe
 
-    df.to_csv(f'{testcases_path}/tasks.csv', index=False) #export dataframe to single .csv file
+    df.to_csv(f'{path}/tasks.csv', index=False) #export dataframe to single .csv file
 
-    df = pd.read_csv(f'{testcases_path}/tasks.csv', sep=';').to_dict(orient="index") #read single .csv file and separate columns by ';'
+    df = pd.read_csv(f'{path}/tasks.csv', sep=';').to_dict(orient="index") #read single .csv file and separate columns by ';'
 
     #redundancy caused by inability to separate columns directly on first read - hopefully can be fixed later
     task_list = []
