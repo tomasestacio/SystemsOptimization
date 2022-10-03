@@ -21,7 +21,6 @@ def tasks_parser(path):
     Returns:
         (class 'pandas.core.frame.DataFrame') df - dataframe with all tasks
     """
-    sep = [';'] #csv column separator
 
     join_files = os.path.join(f"{testcases_path}/*/*.csv") #join all test case .csv files
     joined_list = glob.glob(join_files)
