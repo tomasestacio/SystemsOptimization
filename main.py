@@ -22,16 +22,15 @@ def tasks_parser(path):
         (list) task_list - list with all tasks as Task objects
     """
 
-    join_files = os.path.join(f"{path}/*/*.csv") #join all test case .csv files
-    joined_list = glob.glob(join_files)
+    # join_files = os.path.join(f"{path}/*/*.csv") #use /*/*/.csv for all tasks or specify path for specific datasets
+    # joined_list = glob.glob(join_files)
 
-    df = pd.concat(map(pd.read_csv, joined_list), ignore_index=True) #read all .csv files into dataframe
+    # df = pd.concat(map(pd.read_csv, joined_list), ignore_index=True) #read all .csv files into dataframe
 
-    df.to_csv(f'{path}/tasks.csv', index=False) #export dataframe to single .csv file
+    # df.to_csv(f'{path}/tasks.csv', index=False) #export dataframe to single .csv file
 
-    df = pd.read_csv(f'{path}/tasks.csv', sep=';').to_dict(orient="index") #read single .csv file and separate columns by ';'
+    df = pd.read_csv(f'{path}/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv', sep=';').to_dict(orient="index") #read single .csv file and separate columns by ';'
 
-    #redundancy caused by inability to separate columns directly on first read - hopefully can be fixed later
     task_list = []
     for task in df:
         task_list.append(Task(df[task]))
