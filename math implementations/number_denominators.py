@@ -1,8 +1,8 @@
 ### INPUT
 ### n = single integer
 
-### OUTPut
-### a = array of divisors
+### USEAGE
+### a = list(divisorGenerator(n))
 
 def number_divisors(n):
     import math
