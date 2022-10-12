@@ -1,4 +1,5 @@
-#from pdc_alg import *
+from pdc_alg import *
+from tt_scheduler import *
 import pandas as pd
 
 testcases_path = "/Users/joaomena/Documents/test_cases"
@@ -32,6 +33,16 @@ def tasks_parser(path):
 def main():
     task_list = tasks_parser(testcases_path) #creates list with an object Task for every task in  the csv files
     
+    #create polling server and add it to task_list
+
+    tt_valid = pdc(task_list) # checks if TT tasks are schedulable for EDF using processor demand criterion
+    if(tt_valid > 0):
+        print("Task set not schedulable")
+        return 1
+    tt_schedule = edf_sim(task_list)
+    #print(tt_schedule)
+    
+
 
 if __name__ == "__main__":
     main()

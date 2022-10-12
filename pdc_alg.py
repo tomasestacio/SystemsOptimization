@@ -1,4 +1,3 @@
-from main import *
 import numpy as np
 """
     Ti - computation time -> t_list[i].duration
@@ -28,11 +27,6 @@ def pdc(t_list):
         sum = dbf(t, t_list)
         if(sum > t):
             ns+=1
-        if(sum < t):
-            s+=1
-    print(f"EDF Schedulable: {s}\n")
-    print(f"EDF not Schedulable: {ns}")
-    return 0
-
-testcases_path = "/Users/joaomena/Documents/test_cases"
-pdc(tasks_parser( testcases_path))
+    #print(f"EDF Schedulable: {s}\n")
+    #print(f"EDF not Schedulable: {ns}")
+    return ns
