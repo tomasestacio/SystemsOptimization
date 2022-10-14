@@ -17,6 +17,16 @@ def divisorGenerator(n):
         yield divisor
 
 #
+class Task:
+    def __init__(self, task_dict):
+        self.name = task_dict['name']
+        self.duration = task_dict['duration']
+        self.period = task_dict['period']
+        self.type = task_dict['type']
+        self.priority = task_dict['priority']
+        self.deadline = task_dict['deadline']
+
+#
 def create_poll_src(no_srv:int,hyperperiod):
     
     import numpy as np
@@ -29,13 +39,14 @@ def create_poll_src(no_srv:int,hyperperiod):
     for i in range(0,no_srv):
         # Choose a random divisor
         divisor = divList[np.random.randint(0,len(divList))]
-        # Create a period from a divisor and multiple by consindering times 
+        # Create a period from a divisor and multiple by considering times 
         # divisor can be multiplied into lcm
         # period = np.random.randint(1,hyperperiod/divisor)*divisor
         period = divisor
         budget = np.random.randint(0,period)
-        PS_def = ["tPS{0}".format(i+1),budget,period,"TT",7,period]
-        
+        PS_def_aux = {'name': "tPS{0}".format(i+1), 'duration': budget, 'period': period, 'type': "TT", 'priority': 7, 'deadline': period}
+        PS_def = Task(PS_def_aux)
+
         if i == 0:
             PS_matrix = PS_def
         else:
