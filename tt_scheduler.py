@@ -8,6 +8,8 @@ import glob
 import pandas as pd
 import numpy as np
 
+task_list = tasks_parser("test cases/test cases");
+
 #choosing the task with earliest absolute deadline
 def EDF(tt_tasks):
     trade = 9223372036854775807 #largest int number possible
@@ -85,3 +87,5 @@ def edf_sim(task_list):
     print(wcrt)
 
     return sigma
+
+edf_sim(task_list)
