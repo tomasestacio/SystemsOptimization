@@ -2,6 +2,7 @@
 # for input, we have 30 TT tasks
 from main import *
 from calendar import c
+from PolServer import PS_array
 import os
 import glob
 import pandas as pd
@@ -23,13 +24,18 @@ def edf_sim(task_list):
     D = []
     p = []
 
+    tt_tasks.append(PS_array)
+    C.append(PS_array.duration)
+    D.append(PS_array.deadline)
+    p.append(PS_array.period)
+
     for task in task_list:
         if(task.type == "TT"):
             tt_tasks.append(task)
             C.append(task.duration)
             D.append(task.deadline)
             p.append(task.period)
-        
+
     T = np.lcm.reduce(p)
     r = np.zeros(len(tt_tasks))
     wcrt = np.zeros(len(tt_tasks))
@@ -74,4 +80,8 @@ def edf_sim(task_list):
     for task in tt_tasks:
         if(task.duration > 0):
             print("Schedule is infeasible")
+
+    print(sigma)
+    print(wcrt)
+
     return sigma
