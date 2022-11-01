@@ -17,21 +17,18 @@ def cost_function(TT_tasks_WCRT,ET_tasks_WCRT,ET_schedule):
 
     coeficient=100
     sum_TT=0
-    number_TT=0
-    number_ET=0
+
     for i in TT_tasks_WCRT:
         sum_TT=sum_TT+i
-        number_TT+=1
     sum_ET=0
 
     for i in ET_tasks_WCRT:
         sum_ET=sum_ET+i
-        number_ET+=1
     
 
     #if the schedule for ET tasks is not possible, it will have a really big importance in the cost function
     #for that reason there is a coeficient 
-    cost=sum_TT/number_TT+sum_ET*(1+ET_schedule*coeficient)/number_ET
+    cost=sum_TT/len(TT_tasks_WCRT)+sum_ET*(1+ET_schedule*coeficient)/len(ET_tasks_WCRT)
 
     return cost
 
