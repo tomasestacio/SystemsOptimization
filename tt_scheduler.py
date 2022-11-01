@@ -48,7 +48,7 @@ def edf_sim(task_list):
             U += C[j]/p[j]
 
     T = np.lcm.reduce(p)
-    r = np.zeros(len(tt_tasks))
+    r =  np.zeros(len(tt_tasks))
     wcrt = np.zeros(len(tt_tasks))
     wcrt_changed = np.zeros(len(tt_tasks))
     sigma = []
@@ -87,7 +87,7 @@ def edf_sim(task_list):
                 if(EDFname == task.name):
                     task.duration -= 1 
 
-                if(task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0):
+                if(task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0 and EDFname == task.name):
                     if((t-r[i]) >= wcrt[i]): #Check if the current WCRT is larger than the current maximum.
                         wcrt[i] = t-r[i]
                         wcrt_changed[i] = 1
@@ -104,7 +104,7 @@ def edf_sim(task_list):
             sigma = []
             return sigma
 
-    print("Schedule table = ", sigma)
+    #print("Schedule table = ", sigma)
     print("WCRT table = ", wcrt)
     print("Processor Utilization Factor (U) = ", format(U, '.4f'))
 
