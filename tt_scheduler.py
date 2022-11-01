@@ -84,14 +84,13 @@ def edf_sim(task_list):
             sigma.append(EDFname)
             i = 0
             for task in tt_tasks:
+                if(EDFname == task.name):
+                    task.duration -= 1 
+
                 if(task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0):
                     if((t-r[i]) >= wcrt[i]): #Check if the current WCRT is larger than the current maximum.
                         wcrt[i] = t-r[i]
                         wcrt_changed[i] = 1
-                        
-                if(EDFname == task.name):
-                    task.duration -= 1 
-
                 i += 1
 
         elif(state == 0):
