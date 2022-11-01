@@ -2,7 +2,7 @@ import time
 import numpy as np
 
 class simullated_annealing_parameters:
-    def __init__(self,temperature,solution,cost,cooling_factor,number_poll_servers,budget_poll_servers,period_poll_servers):
+    def __init__(self,temperature,solution,cost,cooling_factor,number_poll_servers,budget_poll_servers,period_poll_servers,norm_max):
         self.curr_temp=temperature
         self.cool=cooling_factor
         self.best_solution=solution
@@ -10,6 +10,8 @@ class simullated_annealing_parameters:
         self.number_poll_servers=number_poll_servers
         self.budget_poll_servers=budget_poll_servers
         self.period_poll_servers=period_poll_servers
+        self.iter=1
+        self.norm_max=norm_max
 
 def cost_function(TT_tasks_WCRT,ET_tasks_WCRT,ET_schedule):
 
@@ -41,13 +43,15 @@ def SimulatedAnnealing(TT_tasks_WCRT,ET_tasks_WCRT,ET_schedule,candidate_solutio
         # if the solution is worse there is a random but decreasing chance to accept it
     else:
         #Lower current temperature will decrease the chance of accepting worse solution
-        if np.random.rand() < np.exp((candidate_cost - parameters.best_cost)/parameters.curr_temp):
+        candidate_cost_norm=np.interp(candidate_cost,[1,parameters.norm_max],[0,200])
+        best_cost_norm=np.interp(parameters.best_cost,[1,parameters.norm_max],[0,200])
+        if np.random.rand() < np.exp(-(candidate_cost_norm - best_cost_norm)/parameters.curr_temp):
             parameters.best_cost = candidate_cost
             parameters.best_solution=candidate_solution
-
     # reduce the temperature (we are still going to discuss about this)
-    parameters.curr_temp = parameters.cool*parameters.curr_temp
+    parameters.curr_temp = parameters.curr_temp/(1+parameters.cool*parameters.iter)
 
+    parameters.iter+=1
     # return the new random changes to have the next candidates
 
     # we are still going to discuss about the boundaries
