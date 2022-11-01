@@ -2,11 +2,13 @@
 # for input, we have 30 TT tasks
 from main import *
 from calendar import c
-from PolServer import PS_array
+from PolServer import PS_array, no_srv
 import os
 import glob
 import pandas as pd
 import numpy as np
+
+task_list = tasks_parser("test cases/test cases");
 
 #choosing the task with earliest absolute deadline
 def EDF(tt_tasks):
@@ -24,10 +26,11 @@ def edf_sim(task_list):
     D = []
     p = []
 
-    tt_tasks.append(PS_array)
-    C.append(PS_array.duration)
-    D.append(PS_array.deadline)
-    p.append(PS_array.period)
+    for i in range(0, no_srv):
+        tt_tasks.append(PS_array[i])
+        C.append(PS_array[i].duration)
+        D.append(PS_array[i].deadline)
+        p.append(PS_array[i].period)
 
     for task in task_list:
         if(task.type == "TT"):
@@ -41,6 +44,7 @@ def edf_sim(task_list):
     wcrt = np.zeros(len(tt_tasks))
     sigma = []
     t = 0
+
     # We go through each slot in the schedule table until T 
     while t < T : 
         state = 0
@@ -85,3 +89,5 @@ def edf_sim(task_list):
     print(wcrt)
 
     return sigma
+
+edf_sim(task_list)
