@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import random
 from math import gcd
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
@@ -13,8 +14,8 @@ def_cooling = 0.25
 
 # set default polling server parameters
 def_no_server = 1
-def_budget = 200
-def_period = 300
+def_budget = 300
+def_period = 1200
 
 
 class Task:
@@ -36,11 +37,15 @@ class SimAnnealingParams:
     class used to define parameters used in the SA algorithm
     """
 
-    def __init__(self, temperature, solution, cost, cooling_factor):
+    def __init__(self, temperature, solution, cost, cooling_factor, number_poll_servers, budget_poll_servers,
+                 period_poll_servers):
         self.curr_temp = temperature
         self.cool = cooling_factor
         self.best_solution = solution
         self.best_cost = cost
+        self.number_poll_servers = number_poll_servers
+        self.budget_poll_servers = budget_poll_servers
+        self.period_poll_servers = period_poll_servers
 
 
 def tasks_parser(path):
@@ -58,6 +63,15 @@ def tasks_parser(path):
         task_list.append(Task(df[task]))
 
     return task_list
+
+
+def divisible_random(a, b, n):
+    if b - a < n:
+        raise Exception('{} is too big'.format(n))
+    result = random.randint(a, b)
+    while result % n != 0:
+        result = random.randint(a, b)
+    return result
 
 
 def dbf(t, t_list):
@@ -107,12 +121,14 @@ def edf_sim(tt, ps_array):
     C = []
     D = []
     p = []
+    U = 0
 
     # fill arrays with parameters from all tasks
     for task in tt_tasks:
         C.append(task.duration)
         D.append(task.deadline)
         p.append(task.period)
+        U = U + task.duration / task.period
 
     # add polling servers to tt tasks array
     for ps in ps_array:
@@ -120,6 +136,7 @@ def edf_sim(tt, ps_array):
         C.append(ps.duration)
         D.append(ps.deadline)
         p.append(ps.period)
+        U = U + ps.duration / ps.period
 
     # compute hyperperiod
     T = np.lcm.reduce(p)
@@ -128,12 +145,15 @@ def edf_sim(tt, ps_array):
     # initialize arrays of set length for r and wcrt
     r = np.zeros(len(tt_tasks))
     wcrt = np.zeros(len(tt_tasks))
+    wcrt_changed = np.zeros(len(tt_tasks))
 
     # check if TT tasks are schedulable for EDF using processor demand criterion
+    """
     tt_valid = pdc(tt_tasks, T)
     if tt_valid > 0:
         print("Task set not schedulable")
-        return [], []
+        return [], [], T
+    """
 
     sigma = []
     t = 0
@@ -147,6 +167,7 @@ def edf_sim(tt, ps_array):
                 return [], [], T
 
             if t % task.period == 0:
+                wcrt_changed[i] = 0
                 r[i] = t
                 task.duration = C[i]
                 task.deadline = t + D[i]
@@ -169,10 +190,12 @@ def edf_sim(tt, ps_array):
                 if edf_name == task.name:
                     task.duration -= 1
 
-                if task.duration == 0 and task.deadline >= t:
+                if task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0:
                     if (t - r[i]) >= wcrt[i]:  # Check if the current WCRT is larger than the current maximum.
                         wcrt[i] = t - r[i]
+                        wcrt_changed[i] = 1
                 i += 1
+
         elif state == 0:
             sigma.append("idle")
 
@@ -183,7 +206,7 @@ def edf_sim(tt, ps_array):
             print("Schedule is infeasible")
             return [], [], T
 
-    print(len(sigma), len(wcrt))
+    print(f"tt wcrt: {wcrt}")
     return sigma, wcrt, T
 
 
@@ -255,9 +278,9 @@ def et_schedule(task_list, Cp, Tp, Dp):
             t += 1
 
         if response_time[index] > actual_task.deadline:
-            return {False, tuple(response_time)}
-
-    return {True, tuple(response_time)}
+            return False, response_time
+    print(f"et wcrt: {response_time}")
+    return True, response_time
 
 
 def cost_function(tt_wcrt, et_wcrt, et_sched):
@@ -268,26 +291,23 @@ def cost_function(tt_wcrt, et_wcrt, et_sched):
     :param et_sched: event triggered tasks schedulability
     :return: int value of computed cost
     """
-    if len(tt_wcrt) == 0:
+    if len(tt_wcrt) == 0 or len(et_wcrt) == 0 or et_wcrt[0] == 0:
         return 999999999999
+    num_et = len(et_wcrt)
+    num_et = len(et_wcrt)
 
-    coefficient = 100
+    coefficient = 20
+
     sum_tt = 0
-
     for i in tt_wcrt:
         sum_tt += i
 
     sum_et = 0
-
-    if len(et_wcrt) > 0:
-        for i in et_wcrt:
-            sum_et += i
-    else:
-        sum_et = 999999999999
+    for i in et_wcrt:
+        sum_et += i
 
     # if the schedule for ET tasks is not possible, it will have a huge impact in the cost
-    print(f"TT WCRT: {sum_tt}")
-    cost = sum_tt + sum_et * (1 + int(et_sched) * coefficient)
+    cost = sum_tt / len(tt_wcrt) + sum_et * (1 + et_sched * coefficient) / len(et_wcrt)
 
     return cost
 
@@ -328,10 +348,12 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, et_tasks_sched, candidate_
 
     # define limits for generated variables
     max_number_poll_servers = 4
-    max_budget = 300
-    min_budget = 50
+    max_budget = 500
+    min_budget = 2
     min_period = 2
     max_period = 12000
+    max_budget_variation = 100
+    max_period_variation = 300
 
     # print(f"tt: {TT_tasks_WCRT} et: {ET_tasks_WCRT} et_schedule: {ET_schedule}")
     print(f"Candidate cost: {candidate_cost}")
@@ -340,19 +362,45 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, et_tasks_sched, candidate_
         parameters.best_cost = candidate_cost
         parameters.best_solution = candidate_solution
 
+    else:
+        if np.random.rand() < np.exp(-(candidate_cost - parameters.best_cost) / parameters.curr_temp):
+            print(f"Candidate cost: {candidate_cost} and Best cost: {parameters.best_cost} before else")
+            parameters.best_cost = candidate_cost
+            parameters.best_solution = candidate_solution
+
     # reduce the temperature (we are still going to discuss this)
     parameters.curr_temp = parameters.cool * parameters.curr_temp
 
     # return the new random changes to have the next candidates
     # we are still going to discuss the boundaries
-
+    """
     number_poll_servers = np.random.randint(1, max_number_poll_servers, 1)
 
     budget_poll_servers = np.random.randint(min_budget, max_budget, size=1)
 
     period_poll_servers = np.random.randint(min_period, max_period, size=1)
+    """
+    parameters.number_poll_servers = 1
+    # budget_poll_servers = divisible_random(min_budget, max_budget, 5)
+    # period_poll_servers = divisible_random(budget_poll_servers, max_period, 1000)
 
-    return number_poll_servers, budget_poll_servers, period_poll_servers
+    max_number_poll_servers_variation = 2
+
+    number_poll_servers_variation = np.random.randint(-max_number_poll_servers_variation,
+                                                      max_number_poll_servers_variation, 1)
+
+    budget_poll_servers_variation = np.random.randint(-max_budget_variation, max_budget_variation, size=1)
+
+    period_poll_servers_variation = np.random.randint(-max_period_variation, max_period_variation, size=1)
+
+    # number_poll_servers=max(1,parameters.number_poll_servers+number_poll_servers__variation)
+
+    parameters.budget_poll_servers = max(100 + abs(budget_poll_servers_variation), parameters.budget_poll_servers +
+                                         budget_poll_servers_variation)
+
+    # parameters.period_poll_servers = max(100, parameters.period_poll_servers + period_poll_servers_variation)
+
+    return parameters.number_poll_servers, parameters.budget_poll_servers, parameters.period_poll_servers
 
 
 def main():
@@ -371,10 +419,11 @@ def main():
 
     # set simulated annealing initial parameters
     cand_sol = [def_no_server, def_budget, def_period]
-    params = SimAnnealingParams(def_temp, cand_sol, cost_function(tt_wcrt, et_wcrt, et_bool), def_cooling)
+    params = SimAnnealingParams(def_temp, cand_sol, cost_function(tt_wcrt, et_wcrt, et_bool), def_cooling,
+                                def_no_server, def_budget, def_period)
     print(f"Initial cost: {params.best_cost}")
 
-    for i in range(0, 20):
+    for i in range(0, 100):
         # run simulated annealing
         print(f"Iteration {i}")
         new_no_ps, new_budget, new_period = simulated_annealing(tt_wcrt, et_wcrt, et_bool, cand_sol, params,
@@ -383,6 +432,7 @@ def main():
         print(f"Best cost: {params.best_cost}")
 
         # update parameters
+
         cand_sol = [new_no_ps, new_budget, new_period]
         new_ps = create_poll_src(1, new_budget, new_period)
         tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tt_list, new_ps)
