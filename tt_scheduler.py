@@ -33,7 +33,7 @@ def edf_sim(task_list):
         C.append(PS_array[i].duration)
         D.append(PS_array[i].deadline)
         p.append(PS_array[i].period)
-        U = U + C[i]/p[i]
+        U += C[i]/p[i]
 
     j = i
 
@@ -45,7 +45,7 @@ def edf_sim(task_list):
             C.append(task.duration)
             D.append(task.deadline)
             p.append(task.period)
-            U = U + C[j]/p[j]
+            U += C[j]/p[j]
 
     T = np.lcm.reduce(p)
     r = np.zeros(len(tt_tasks))
@@ -53,6 +53,7 @@ def edf_sim(task_list):
     wcrt_changed = np.zeros(len(tt_tasks))
     sigma = []
     t = 0
+    print("Processor Utilization Factor (U) = ", format(U, '.4f'))
 
     # We go through each slot in the schedule table until T 
     while t < T : 
@@ -83,14 +84,13 @@ def edf_sim(task_list):
             sigma.append(EDFname)
             i = 0
             for task in tt_tasks:
-                if(EDFname == task.name):
-                    task.duration -= 1 
-
                 if(task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0):
                     if((t-r[i]) >= wcrt[i]): #Check if the current WCRT is larger than the current maximum.
                         wcrt[i] = t-r[i]
                         wcrt_changed[i] = 1
-                        #print("Task ", i , " has wcrt: ", wcrt[i])
+                        
+                if(EDFname == task.name):
+                    task.duration -= 1 
 
                 i += 1
 
