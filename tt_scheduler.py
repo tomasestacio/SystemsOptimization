@@ -8,7 +8,7 @@ import glob
 import pandas as pd
 import numpy as np
 
-task_list = tasks_parser("test cases/test cases");
+task_list = tasks_parser("test cases/test cases")
 
 #choosing the task with earliest absolute deadline
 def EDF(tt_tasks):
@@ -25,23 +25,32 @@ def edf_sim(task_list):
     C = []
     D = []
     p = []
+    U = 0
 
+    # adding the polling servers in the tt_tasks variable
     for i in range(0, no_srv):
         tt_tasks.append(PS_array[i])
         C.append(PS_array[i].duration)
         D.append(PS_array[i].deadline)
         p.append(PS_array[i].period)
+        U = U + C[i]/p[i]
 
+    j = i
+
+    # adding the TT tasks in the tt_tasks variable
     for task in task_list:
         if(task.type == "TT"):
+            j += 1
             tt_tasks.append(task)
             C.append(task.duration)
             D.append(task.deadline)
             p.append(task.period)
+            U = U + C[j]/p[j]
 
     T = np.lcm.reduce(p)
     r = np.zeros(len(tt_tasks))
     wcrt = np.zeros(len(tt_tasks))
+    wcrt_changed = np.zeros(len(tt_tasks))
     sigma = []
     t = 0
 
@@ -52,11 +61,11 @@ def edf_sim(task_list):
         for task in tt_tasks:
             if(task.duration > 0 and task.deadline <= t): 
                 print('Deadline miss!')
-                
-            if(task.duration == 0 and task.deadline >= t):
-                if((t-r[i]) >= wcrt[i]): #Check if the current WCRT is larger than the current maximum.
-                    wcrt[i] = t-r[i]
+                sigma = []
+                return sigma
+
             if(t % task.period == 0):
+                wcrt_changed[i] = 0
                 r[i] = t
                 task.duration = C[i]
                 task.deadline = t + D[i]
@@ -68,13 +77,22 @@ def edf_sim(task_list):
                 #there are still tasks that have computation time, so lets break this loop and compute them, after checking EDF
                 state = 1
                 break
-
+            
         if(state == 1):
             EDFname = EDF(tt_tasks)
             sigma.append(EDFname)
+            i = 0
             for task in tt_tasks:
                 if(EDFname == task.name):
                     task.duration -= 1 
+
+                if(task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0):
+                    if((t-r[i]) >= wcrt[i]): #Check if the current WCRT is larger than the current maximum.
+                        wcrt[i] = t-r[i]
+                        wcrt_changed[i] = 1
+                        #print("Task ", i , " has wcrt: ", wcrt[i])
+
+                i += 1
 
         elif(state == 0):
             sigma.append("idle")
@@ -84,9 +102,12 @@ def edf_sim(task_list):
     for task in tt_tasks:
         if(task.duration > 0):
             print("Schedule is infeasible")
+            sigma = []
+            return sigma
 
-    print(sigma)
-    print(wcrt)
+    print("Schedule table = ", sigma)
+    print("WCRT table = ", wcrt)
+    print("Processor Utilization Factor (U) = ", format(U, '.4f'))
 
     return sigma
 
