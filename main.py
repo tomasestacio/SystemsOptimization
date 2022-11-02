@@ -15,7 +15,7 @@ def_cooling = 0.25
 # set default polling server parameters
 def_no_server = 1
 def_budget = 300
-def_period = 1200
+def_period = 500
 
 
 class Task:
@@ -83,7 +83,7 @@ def dbf(t, t_list):
     """
     s = 0
     for task in t_list:
-        if task.type == "ET":
+        if task.type == "TT":
             continue
         s += ((t + task.period - task.deadline) / task.period) * task.duration
     return s
@@ -106,33 +106,33 @@ def pdc(t_list, tt_hyperperiod):
     return sched
 
 
-def edf_sim(tt, ps_array):
+def edf_sim(t_list, ps_array):
     """
     shedule time triggered tasks and compute worst case response time
-    :param tt: array with time triggered tasks
+    :param t_list: array with time all tasks
     :param ps_array: array with polling servers
     :return: arrays with schedule made and worst case response time and hyperperiod
              or empty arrays if schedule is unfeasible within the deadline
     """
-    # add tt tasks to array
-    tt_tasks = tt
-
     # define arrays for computational time (C), deadline (D) and period (P)
     C = []
     D = []
     p = []
     U = 0
 
-    # fill arrays with parameters from all tasks
-    for task in tt_tasks:
-        C.append(task.duration)
-        D.append(task.deadline)
-        p.append(task.period)
-        U = U + task.duration / task.period
+    # add tt tasks to array and fill arrays with parameters from all tasks
+    tt_list = []
+    for task in t_list:
+        if task.type == "TT":
+            tt_list.append(task)
+            C.append(task.duration)
+            D.append(task.deadline)
+            p.append(task.period)
+            U = U + task.duration / task.period
 
     # add polling servers to tt tasks array
     for ps in ps_array:
-        tt_tasks.append(ps)
+        tt_list.append(ps)
         C.append(ps.duration)
         D.append(ps.deadline)
         p.append(ps.period)
@@ -143,17 +143,19 @@ def edf_sim(tt, ps_array):
     print(f"Hyperperiod: {T}")
 
     # initialize arrays of set length for r and wcrt
-    r = np.zeros(len(tt_tasks))
-    wcrt = np.zeros(len(tt_tasks))
-    wcrt_changed = np.zeros(len(tt_tasks))
+    r = np.zeros(len(tt_list))
+    wcrt = np.zeros(len(tt_list))
+    wcrt_changed = np.zeros(len(tt_list))
 
     # check if TT tasks are schedulable for EDF using processor demand criterion
-    """
-    tt_valid = pdc(tt_tasks, T)
+    tt_valid = pdc(tt_list, T)
     if tt_valid > 0:
         print("Task set not schedulable")
         return [], [], T
-    """
+    print("Task set schedulable")
+
+    # for task in tt_list:
+    #     print(f"task {task.name}  duration {task.duration}  period {task.period}  deadline {task.deadline}")
 
     sigma = []
     t = 0
@@ -161,7 +163,7 @@ def edf_sim(tt, ps_array):
     while t < T:
         state = 0
         i = 0
-        for task in tt_tasks:
+        for task in tt_list:
             if task.duration > 0 and task.deadline <= t:
                 print('Deadline miss!')
                 return [], [], T
@@ -175,7 +177,7 @@ def edf_sim(tt, ps_array):
             i += 1
         # print("tt_tasks gone through")
 
-        for task in tt_tasks:
+        for task in tt_list:
             if task.duration != 0:
                 # there are still tasks that have computation time
                 state = 1
@@ -183,14 +185,14 @@ def edf_sim(tt, ps_array):
         # print("state checked")
 
         if state == 1:
-            edf_name = edf(tt_tasks)
+            edf_name = edf(tt_list)
             sigma.append(edf_name)
             i = 0
-            for task in tt_tasks:
+            for task in tt_list:
                 if edf_name == task.name:
                     task.duration -= 1
 
-                if task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0:
+                if task.duration == 0 and task.deadline >= t and wcrt_changed[i] == 0 and edf_name == task.name:
                     if (t - r[i]) >= wcrt[i]:  # Check if the current WCRT is larger than the current maximum.
                         wcrt[i] = t - r[i]
                         wcrt_changed[i] = 1
@@ -201,12 +203,11 @@ def edf_sim(tt, ps_array):
 
         t += 1
 
-    for task in tt_tasks:
+    for task in tt_list:
         if task.duration > 0:
             print("Schedule is infeasible")
             return [], [], T
-
-    print(f"tt wcrt: {wcrt}")
+    # print(f"tt wcrt: {wcrt}")
     return sigma, wcrt, T
 
 
@@ -233,6 +234,7 @@ def et_schedule(task_list, Cp, Tp, Dp):
     :param Dp: deadline
     :return: bool for schedulability and tuple with worst case response times
     """
+    print(Cp)
     et_mask = []
     for task in task_list:
         et_mask.append((task.type == 'ET'))
@@ -241,6 +243,7 @@ def et_schedule(task_list, Cp, Tp, Dp):
 
     delta = Tp + Dp - 2 * Cp  # in the future this is a parameter (extension 3)
     alfa = Cp / Tp
+    print(f"alfa: {alfa}  delta: {delta}  Cp: {Cp}  Dp: {Dp}  Tp: {Tp}")
 
     period_list = []
     for task in et_tasks:
@@ -248,12 +251,15 @@ def et_schedule(task_list, Cp, Tp, Dp):
     hyperperiod = np.lcm.reduce(period_list)  # compute hyperperiod
 
     response_time = []
+
     for index, actual_task in zip(range(len(et_tasks)), et_tasks):
+        print(f"Name: {actual_task.name}  Duration: {actual_task.duration}  Period: {actual_task.period}  Deadline: {actual_task.deadline}")
         t = 0  # current time
         response_time.append(actual_task.deadline + 1)
+        # print(f"Response time: {response_time}")
+        print(f"Index: {index}")
         # Initialize the response time of τi to a value exceeding the deadline
         # because if it's not schedulable, it is already done to return False
-
         while t <= hyperperiod:
 
             # linear supply bound function that will be important to compute the WCRT
@@ -278,8 +284,9 @@ def et_schedule(task_list, Cp, Tp, Dp):
             t += 1
 
         if response_time[index] > actual_task.deadline:
+            print(f"FALSE et wcrt: {response_time}")
             return False, response_time
-    print(f"et wcrt: {response_time}")
+    print(f"TRUE et wcrt: {response_time}")
     return True, response_time
 
 
@@ -301,11 +308,11 @@ def cost_function(tt_wcrt, et_wcrt, et_sched):
     sum_tt = 0
     for i in tt_wcrt:
         sum_tt += i
-
+    print(f"tt cost: {sum_tt}")
     sum_et = 0
     for i in et_wcrt:
         sum_et += i
-
+    print(f"et cost: {sum_et}")
     # if the schedule for ET tasks is not possible, it will have a huge impact in the cost
     cost = sum_tt / len(tt_wcrt) + sum_et * (1 + et_sched * coefficient) / len(et_wcrt)
 
@@ -356,7 +363,7 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, et_tasks_sched, candidate_
     max_period_variation = 300
 
     # print(f"tt: {TT_tasks_WCRT} et: {ET_tasks_WCRT} et_schedule: {ET_schedule}")
-    print(f"Candidate cost: {candidate_cost}")
+    print(f"Candidate cost: {int(candidate_cost)}")
 
     if candidate_cost < parameters.best_cost:  # update the best solution for lower cost
         parameters.best_cost = candidate_cost
@@ -405,38 +412,37 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, et_tasks_sched, candidate_
 
 def main():
     # create list with an object Task for every task in  the csv files
+    task_list = []
     task_list = tasks_parser(testcases_path)
 
-    # create list of time triggered tasks
-    tt_list = []
-    for task in task_list:
-        if task.type == "TT":
-            tt_list.append(task)
-
     # schedule  ET and TT tasks
-    tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tt_list, create_poll_src(def_no_server, def_budget, def_period))
-    et_bool, et_wcrt = et_schedule(task_list, def_budget, def_period, def_period)
+    tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tasks_parser(testcases_path), create_poll_src(def_no_server, def_budget, def_period))
+    et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), def_budget, def_period, def_period)
 
     # set simulated annealing initial parameters
     cand_sol = [def_no_server, def_budget, def_period]
     params = SimAnnealingParams(def_temp, cand_sol, cost_function(tt_wcrt, et_wcrt, et_bool), def_cooling,
                                 def_no_server, def_budget, def_period)
+
     print(f"Initial cost: {params.best_cost}")
 
     for i in range(0, 100):
         # run simulated annealing
-        print(f"Iteration {i}")
+        print(f"\nIteration {i}")
         new_no_ps, new_budget, new_period = simulated_annealing(tt_wcrt, et_wcrt, et_bool, cand_sol, params,
                                                                 tt_hyperperiod)
         print(f"Iteration {i} SA executed with budget of {new_budget} and period of {new_period}")
-        print(f"Best cost: {params.best_cost}")
+        print(f"Best cost: {int(params.best_cost)}")
 
         # update parameters
 
         cand_sol = [new_no_ps, new_budget, new_period]
         new_ps = create_poll_src(1, new_budget, new_period)
-        tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tt_list, new_ps)
-        et_bool, et_wcrt = et_schedule(task_list, new_budget, new_period, new_period)
+        tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tasks_parser(testcases_path), new_ps)
+        # for task in task_list:
+        #    print(f"Name: {task.name}  Duration: {task.duration}  Period: {task.period}  Deadline: {task.deadline}")
+        print(f"New budget: {new_budget}")
+        et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), new_budget, new_period, new_period)
 
     print(params.best_solution)
 
