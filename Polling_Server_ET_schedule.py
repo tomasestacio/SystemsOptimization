@@ -63,9 +63,9 @@ def ET_Schedule(ET_tasks,Cp,Tp,Dp):
             #print(t)
 
         if responseTime[index]>actual_task.deadline:
-            return {False,tuple(responseTime)}
+            return False,responseTime
 
-    return {True,tuple(responseTime)}
+    return True,responseTime
 
 
 task_list = tasks_parser(testcases_path)
