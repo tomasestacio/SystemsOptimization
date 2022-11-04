@@ -33,6 +33,7 @@ class Task:
         self.seperation = task_dict['seperation']
 
 
+
 class SimAnnealingParams:
     """
     class used to define parameters used in the SA algorithm
@@ -334,7 +335,7 @@ def create_poll_src(no_srv, budget, period):
     i = 0
     while i < no_srv:
         ps_def_aux = {'name': "tPS{0}".format(i + 1), 'duration': budget, 'period': period, 'type': "TT", 'priority': 7,
-                      'deadline': period}
+                      'deadline': period, 'seperation' : 0}
         ps_def = Task(ps_def_aux)
         ps_matrix.append(ps_def)
         i += 1
@@ -409,20 +410,40 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt,tt_schedule, et_tasks_sched
 
     return int(number_poll_servers), int(budget_poll_servers), int(period_poll_servers)
 
+def task_seperation(t_list):
+    sep_list = []
+    count = 0
+    for task in t_list:
+        if task.type == "ET":
+            sep_list.append(task.seperation)
+            count += 1
+    
+    #Find minimum number of polling servers from separation values
+    unique_values = list(set(sep_list))
+    min_no_ps = len(unique_values)
+
+    #Find maximum number of polling servers from amount of ET tasks
+    max_no_ps = count
+
+    return max_no_ps, min_no_ps
 
 def main():
     # create list with an object Task for every task in  the csv files
     task_list = []
     task_list = tasks_parser(testcases_path)
+
+    # get min / max number of polling servers
+    max_no_srv, min_no_srv = task_seperation(task_list)
+
     et_wcrt=[]
     et_bool=1
     # schedule  ET and TT tasks
-    tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tasks_parser(testcases_path), create_poll_src(def_no_server, def_budget, def_period))
+    tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(task_list, create_poll_src(def_no_server, def_budget, def_period))
     if(len(tt_wcrt)==0):
             tt_schedule_bool=0
     else : 
         tt_schedule_bool=1
-        et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), def_budget, def_period, def_period)
+        et_bool, et_wcrt = et_schedule(task_list, def_budget, def_period, def_period)
 
     # set simulated annealing initial parameters
     cand_sol = [def_no_server, def_budget, def_period]
