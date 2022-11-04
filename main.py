@@ -30,6 +30,7 @@ class Task:
         self.type = task_dict['type']
         self.priority = task_dict['priority']
         self.deadline = task_dict['deadline']
+        self.seperation = task_dict['seperation']
 
 
 class SimAnnealingParams:
