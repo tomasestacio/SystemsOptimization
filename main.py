@@ -6,11 +6,11 @@ from math import gcd
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 # set file path for test cases
-testcases_path = 'C:\\Users\\Tiago Daily\\Desktop\\DTU\\SO\\test cases\\test cases'
+testcases_path = 'C:\\Users\\hcn\\Downloads\\testcases\\testcases'
 
 # set default values for SA temperature and cooling
-def_temp = 200
-def_cooling = 0.01
+def_temp = 20
+def_cooling = 0.3
 
 # set default polling server parameters
 def_no_server = 1
@@ -382,8 +382,8 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt,tt_schedule, et_tasks_sched
                 parameters.best_schedule=tt_schedule
 
 
-        parameters.curr_temp = parameters.curr_temp/(1+parameters.cool*parameters.iter)
-    
+        parameters.curr_temp = def_temp/(1+parameters.cool*parameters.iter)
+        
     # return the new random changes to have the next candidates
     # we are still going to discuss the boundaries
     # define limits for generated variables
@@ -475,7 +475,7 @@ def main():
         #    print(f"Name: {task.name}  Duration: {task.duration}  Period: {task.period}  Deadline: {task.deadline}")
         et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), new_budget, new_period, new_period)
 
-    print(params.best_solution)
+    print("No of Servers:",params.best_solution[0],", Budget:",params.best_solution[1],", Period:",params.best_solution[2])
 
 
 if __name__ == "__main__":
