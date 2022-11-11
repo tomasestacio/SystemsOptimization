@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
-from math import gcd
+import time
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
@@ -11,7 +11,7 @@ testcases_path = "/Users/joaomena/Documents/testcases_seperation"
 
 # set default values for SA temperature and cooling
 def_temp = 20
-def_cooling = 0.3
+def_cooling = 0.5
 
 # set default polling server parameters
 def_no_server = 1
@@ -79,21 +79,6 @@ def divisible_random(a, b, n):
     return result
 
 
-def dbf(t, t_list):
-    """
-    compute Demand Bound Function
-    :param t: time instant
-    :param t_list: task list
-    :return: result of the mathematical operation
-    """
-    s = 0
-    for task in t_list:
-        if task.type == "TT":
-            continue
-        s += ((t + task.period - task.deadline) / task.period) * task.duration
-    return s
-
-
 def pdc(t_list, tt_hyperperiod):
     """
     use processor demand criterion to determine if a set of tasks is schedulable or not
@@ -101,14 +86,14 @@ def pdc(t_list, tt_hyperperiod):
     :param tt_hyperperiod: hyperperiod from the tasks considered
     :return: 0 if schedulable, 1 if not schedulable
     """
-    sched = 0
-    t = 1
-    while t < tt_hyperperiod:
-        s = dbf(t, t_list)
-        if s > t:
-            sched += 1
-        t += 1
-    return sched
+    s = 0
+    for task in t_list:
+        s += (tt_hyperperiod / task.period) * task.duration
+
+    if s > tt_hyperperiod:
+        return 1
+
+    return 0
 
 
 def edf_sim(t_list, ps_array):
@@ -224,6 +209,7 @@ def edf(tt_tasks):
     :return: name of the task with the earliest absolute deadline
     """
     trade = 99999999999  # largest int number possible
+    name = ''
     for task in tt_tasks:
         if trade > task.deadline and task.duration != 0:
             trade = task.deadline
@@ -252,7 +238,7 @@ def et_tasks_seperation(task_list, no_poll_srv):
 def et_schedule(et_tasks, Cp, Tp, Dp):
     """
     determine if event triggered tasks are schedulable and compute worst case response time
-    :param task_list: list of tasks
+    :param et_tasks: list of tasks
     :param Cp: compute time
     :param Tp: period
     :param Dp: deadline
@@ -335,7 +321,7 @@ def cost_function(tt_wcrt, et_wcrt_groups, et_sched):
     # print(f"et cost: {sum_et}")
     bool_var = et_sched
     # if the schedule for ET tasks is not possible, it will have a huge impact in the cost
-    cost = sum_tt / len(tt_wcrt) + sum_et * (1 + 2 * bool_var * coefficient) / len(et_wcrt)
+    cost = sum_tt / len(tt_wcrt) + sum_et * (1 + 2 * bool_var * coefficient) / len(et_wcrt_groups)
 
     return cost
 
@@ -494,7 +480,10 @@ def main():
 
     print(f"Initial cost: {params.best_cost}")
 
-    for i in range(0, 100):
+    initial_time = time.time()
+    curr_time = 0
+    i = 0
+    while params.curr_temp > 0.1 and curr_time < 60:
         # run simulated annealing
 
         new_no_ps, new_budget, new_period = simulated_annealing(tt_wcrt, et_wcrt_groups, tt_schedule, et_bool, cand_sol,
