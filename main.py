@@ -6,7 +6,8 @@ from math import gcd
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 # set file path for test cases
-testcases_path = r'C:\Users\tiago\code\git_repos\SystemsOptimization\testcases_seperation_tested'
+# testcases_path = r'C:\Users\tiago\code\git_repos\SystemsOptimization\testcases_seperation_tested'
+testcases_path = "/Users/joaomena/Documents/testcases_seperation"
 
 # set default values for SA temperature and cooling
 def_temp = 20
@@ -33,20 +34,20 @@ class Task:
         self.seperation = task_dict['seperation']
 
 
-
 class SimAnnealingParams:
     """
     class used to define parameters used in the SA algorithm
     """
 
-    def __init__(self, temperature, solution, cost,best_schedule, cooling_factor,norm_max):
+    def __init__(self, temperature, solution, cost, best_schedule, cooling_factor, norm_max):
         self.curr_temp = temperature
         self.cool = cooling_factor
         self.best_solution = solution
         self.best_cost = cost
-        self.best_schedule=best_schedule
-        self.iter=1
-        self.norm_max=norm_max
+        self.best_schedule = best_schedule
+        self.iter = 1
+        self.norm_max = norm_max
+
 
 def tasks_parser(path):
     """
@@ -60,7 +61,7 @@ def tasks_parser(path):
         sep=';').to_dict(orient="index")  # read single .csv file and separate columns by ';' """
 
     df = pd.read_csv(
-        f'{path}/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv',
+        f'{path}/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv',
         sep=';').to_dict(orient="index")  # read single .csv file and separate columns by ';'
     task_list = []
     for task in df:
@@ -229,21 +230,22 @@ def edf(tt_tasks):
             name = task.name
     return name
 
-def et_tasks_separation(task_list,no_poll_srv):
+
+def et_tasks_seperation(task_list, no_poll_srv):
     et_mask = []
     for task in task_list:
         et_mask.append((task.type == 'ET'))
 
     et_tasks = [task for task, y in zip(task_list, et_mask) if y]
 
-    et_tasks_all_groups=[]
-    et_task_group=[]
+    et_tasks_all_groups = []
+    et_task_group = []
     for i in range(no_poll_srv):
         for task in et_tasks:
-            if(task.seperation==i+1):
+            if task.seperation == i + 1:
                 et_task_group.append(task)
         et_tasks_all_groups.append(et_task_group)
-    
+
     return et_tasks_all_groups
 
 
@@ -257,10 +259,10 @@ def et_schedule(et_tasks, Cp, Tp, Dp):
     :return: bool for schedulability and tuple with worst case response times
     """
     print(Cp)
-    
+
     delta = Tp + Dp - 2 * Cp  # in the future this is a parameter (extension 3)
     alfa = Cp / Tp
-    #print(f"alfa: {alfa}  delta: {delta}  Cp: {Cp}  Dp: {Dp}  Tp: {Tp}")
+    # print(f"alfa: {alfa}  delta: {delta}  Cp: {Cp}  Dp: {Dp}  Tp: {Tp}")
 
     period_list = []
     for task in et_tasks:
@@ -270,11 +272,10 @@ def et_schedule(et_tasks, Cp, Tp, Dp):
     response_time = []
 
     for index, actual_task in zip(range(len(et_tasks)), et_tasks):
-        #print(f"Name: {actual_task.name}  Duration: {actual_task.duration}  Period: {actual_task.period}  Deadline: {actual_task.deadline}")
         t = 0  # current time
         response_time.append(actual_task.deadline + 1)
-        #print(f"Response time: {response_time}")
-        #print(f"Index: {index}")
+        # print(f"Response time: {response_time}")
+        # print(f"Index: {index}")
         # Initialize the response time of τi to a value exceeding the deadline
         # because if it's not schedulable, it is already done to return False
         while t <= hyperperiod:
@@ -310,17 +311,16 @@ def et_schedule(et_tasks, Cp, Tp, Dp):
 def cost_function(tt_wcrt, et_wcrt_groups, et_sched):
     """
     compute cost function to determine quality of a solution
+    :param et_wcrt_groups: event triggered tasks worst case response time
     :param tt_wcrt: time triggered tasks worst case response time
-    :param et_wcrt: event triggered tasks worst case response time
     :param et_sched: event triggered tasks schedulability
     :return: int value of computed cost
     """
 
-
-    if len(tt_wcrt) == 0 or len(et_wcrt_groups) == 0 :
+    if len(tt_wcrt) == 0 or len(et_wcrt_groups) == 0:
         return 999999999999
-    #num_et = len(et_wcrt)
-    #num_et = len(et_wcrt)
+    # num_et = len(et_wcrt)
+    # num_et = len(et_wcrt)
 
     coefficient = 100
     sum_tt = 0
@@ -331,11 +331,11 @@ def cost_function(tt_wcrt, et_wcrt_groups, et_sched):
     for et_wcrt in et_wcrt_groups:
         for i in et_wcrt:
             sum_et += i
-        #print("SUM_ET:",sum_et,len(et_wcrt_groups),et_sched)
-    #print(f"et cost: {sum_et}")
-    bool=et_sched
+        # print("SUM_ET:",sum_et,len(et_wcrt_groups),et_sched)
+    # print(f"et cost: {sum_et}")
+    bool_var = et_sched
     # if the schedule for ET tasks is not possible, it will have a huge impact in the cost
-    cost = sum_tt / len(tt_wcrt) + sum_et * (1 + 2*bool * coefficient) / len(et_wcrt)
+    cost = sum_tt / len(tt_wcrt) + sum_et * (1 + 2 * bool_var * coefficient) / len(et_wcrt)
 
     return cost
 
@@ -344,24 +344,27 @@ def create_poll_src(no_srv, budgets, periods):
     """
     create polling server with given parameters
     :param no_srv: number of intended polling servers
-    :param budget: budget for the polling server
-    :param period: period for the polling server
+    :param budgets: budget for the polling server
+    :param periods: period for the polling server
     :return: list of polling servers created
     """
     ps_matrix = []
     i = 0
-    for budget,period in zip(budgets,periods):
+    for budget, period in zip(budgets, periods):
         ps_def_aux = {'name': "tPS{0}".format(i + 1), 'duration': budget, 'period': period, 'type': "TT", 'priority': 7,
-                      'deadline': period, 'seperation' : 0}
+                      'deadline': period, 'seperation': 0}
         ps_def = Task(ps_def_aux)
         ps_matrix.append(ps_def)
         i += 1
     return ps_matrix
 
 
-def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt,tt_schedule, et_tasks_sched, candidate_solution, parameters, hyperperiod,tt_schedule_bool):
+def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, tt_schedule, et_tasks_sched, candidate_solution, parameters,
+                        hyperperiod, tt_schedule_bool):
     """
     compares cost of proposed solution to the best solution and returns random values to test again
+    :param tt_schedule: returned schedule from edf function
+    :param tt_schedule_bool: bool that indicates if tt tasks are schedulable or not
     :param tt_tasks_wcrt: time triggered tasks worst case response time
     :param et_tasks_wcrt: event triggered tasks worst case response time
     :param et_tasks_sched: event triggered tasks schedulability
@@ -370,7 +373,7 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt,tt_schedule, et_tasks_sched
     :param hyperperiod: hyperperiod of all time triggered tasks including polling server
     :return: new number of polling servers, budget and period randomly generated
     """
-    if(tt_schedule_bool==1):
+    if tt_schedule_bool == 1:
         # calculate cost with the parameters given
         candidate_cost = cost_function(tt_tasks_wcrt, et_tasks_wcrt, et_tasks_sched)
 
@@ -380,56 +383,57 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt,tt_schedule, et_tasks_sched
         if candidate_cost < parameters.best_cost:  # update the best solution for lower cost
             parameters.best_cost = candidate_cost
             parameters.best_solution = candidate_solution
-            parameters.best_schedule=tt_schedule
+            parameters.best_schedule = tt_schedule
 
         else:
             print("candidate has a worse solution than the best solution")
-            candidate_cost_norm=np.interp(candidate_cost,[1,parameters.norm_max],[0,200])
-            best_cost_norm=np.interp(parameters.best_cost,[1,parameters.norm_max],[0,200])
-            rand_number=np.random.rand()
-            factor_prob=np.exp(-(candidate_cost_norm - best_cost_norm)/parameters.curr_temp)
-            print("DECISION FACTORS",rand_number,factor_prob)
+            candidate_cost_norm = np.interp(candidate_cost, [1, parameters.norm_max], [0, 200])
+            best_cost_norm = np.interp(parameters.best_cost, [1, parameters.norm_max], [0, 200])
+            rand_number = np.random.rand()
+            factor_prob = np.exp(-(candidate_cost_norm - best_cost_norm) / parameters.curr_temp)
+            print("DECISION FACTORS", rand_number, factor_prob)
             print(f"Temperature:{parameters.curr_temp}")
-            if (rand_number < factor_prob  ):
+            if rand_number < factor_prob:
                 print("candidate with worse solution was accepted")
-                print(f"Candidate cost: {candidate_cost} and Best cost: {parameters.best_cost} before random acceptance")
+                print(
+                    f"Candidate cost: {candidate_cost} and Best cost: {parameters.best_cost} before random acceptance")
                 parameters.best_cost = candidate_cost
                 parameters.best_solution = candidate_solution
-                parameters.best_schedule=tt_schedule
+                parameters.best_schedule = tt_schedule
 
+        parameters.curr_temp = def_temp / (1 + parameters.cool * parameters.iter)
 
-        parameters.curr_temp = def_temp/(1+parameters.cool*parameters.iter)
-        
     # return the new random changes to have the next candidates
     # we are still going to discuss the boundaries
     # define limits for generated variables
-    #max_number_poll_servers = 4
+    # max_number_poll_servers = 4
     max_budget_variation = 20
     max_period_variation = 25
-    #max_number_poll_servers_variation = 2
-    number_poll_servers=candidate_solution[0] #number of poll servers is fixed for the dataset
-    
-    period_poll_servers=[]
+    # max_number_poll_servers_variation = 2
+    number_poll_servers = candidate_solution[0]  # number of poll servers is fixed for the dataset
+
+    period_poll_servers = []
     for i in range(number_poll_servers):
-        period=hyperperiod-1
-        while(hyperperiod%period!=0 or period<1):
+        period = hyperperiod - 1
+        while hyperperiod % period != 0 or period < 1:
             period_poll_servers_variation = np.random.randint(-max_period_variation, max_period_variation, size=1)
             period = parameters.best_solution[2][i] + period_poll_servers_variation
-            if(period==0): period=-1
-        
+            if period == 0: period = -1
+
         period_poll_servers.append(int(period))
 
-    budget_poll_servers=[]
+    budget_poll_servers = []
     for i in range(number_poll_servers):
-        budget=-1
-        while(budget<1 or budget>period_poll_servers[i]):
+        budget = -1
+        while budget < 1 or budget > period_poll_servers[i]:
             budget_poll_servers_variation = np.random.randint(-max_budget_variation, max_budget_variation, size=1)
             budget = parameters.best_solution[1][i] + budget_poll_servers_variation
 
         budget_poll_servers.append(int(budget))
-    #print("BUDGET_POLL SERVERS:",budget_poll_servers)
-    #print("PERIOD_POLL SERVERS:",period_poll_servers)
-    return int(number_poll_servers), budget_poll_servers,period_poll_servers 
+    # print("BUDGET_POLL SERVERS:",budget_poll_servers)
+    # print("PERIOD_POLL SERVERS:",period_poll_servers)
+    return int(number_poll_servers), budget_poll_servers, period_poll_servers
+
 
 def task_seperation(t_list):
     sep_list = []
@@ -438,15 +442,16 @@ def task_seperation(t_list):
         if task.type == "ET":
             sep_list.append(task.seperation)
             count += 1
-    
-    #Find minimum number of polling servers from separation values
+
+    # Find minimum number of polling servers from separation values
     unique_values = list(set(sep_list))
     min_no_ps = len(unique_values)
 
-    #Find maximum number of polling servers from amount of ET tasks
+    # Find maximum number of polling servers from amount of ET tasks
     max_no_ps = count
 
     return max_no_ps, min_no_ps
+
 
 def main():
     # create list with an object Task for every task in  the csv files
@@ -454,75 +459,80 @@ def main():
     task_list = tasks_parser(testcases_path)
 
     # get min / max number of polling servers
-    max_no_srv, min_no_srv = task_seperation(task_list) # we decided to use only the min_no_srv 
+    max_no_srv, min_no_srv = task_seperation(task_list)  # we decided to use only the min_no_srv
 
     # get groups of et tasks with same separation number
-    et_tasks_groups=et_tasks_separation(task_list,min_no_srv)
-    et_wcrt=[]
-    et_bool=1
-    et_wcrt_groups=[]
-    et_bool_groups=[]
-    budget_poll_srv=np.array([def_budget for i in range(min_no_srv)])
-    period_poll_srv=np.array([def_period for i in range(min_no_srv)])
+    et_tasks_groups = et_tasks_seperation(task_list, min_no_srv)
+    et_wcrt = []
+    et_bool = 1
+    et_wcrt_groups = []
+    et_bool_groups = []
+    budget_poll_srv = np.array([def_budget for i in range(min_no_srv)])
+    period_poll_srv = np.array([def_period for i in range(min_no_srv)])
 
     # schedule  ET and TT tasks
-    tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(task_list, create_poll_src(min_no_srv, budget_poll_srv, period_poll_srv))
-    if(len(tt_wcrt)==0):
-            tt_schedule_bool=0
-    else : 
-        tt_schedule_bool=1
-        for i,et_tasks in enumerate(et_tasks_groups):
+    tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(task_list,
+                                                   create_poll_src(min_no_srv, budget_poll_srv, period_poll_srv))
+    if len(tt_wcrt) == 0:
+        tt_schedule_bool = 0
+    else:
+        tt_schedule_bool = 1
+        for i, et_tasks in enumerate(et_tasks_groups):
             et_bool, et_wcrt = et_schedule(et_tasks, def_budget, def_period, def_period)
             et_bool_groups.append(et_bool)
             et_wcrt_groups.append(et_wcrt)
-    et_bool=0
-    for bool in et_bool_groups:
-        if (bool==False): et_bool+=1
-        break
-    
+    et_bool = 0
+    for bool_var in et_bool_groups:
+        if not bool_var:
+            et_bool += 1
+            break
+
     # set simulated annealing initial parameters
     cand_sol = [min_no_srv, [def_budget for i in range(min_no_srv)], [def_period for i in range(min_no_srv)]]
-    params = SimAnnealingParams(def_temp, cand_sol, cost_function(tt_wcrt, et_wcrt_groups, et_bool),tt_schedule, def_cooling,10000)
+    params = SimAnnealingParams(def_temp, cand_sol, cost_function(tt_wcrt, et_wcrt_groups, et_bool), tt_schedule,
+                                def_cooling, 10000)
 
     print(f"Initial cost: {params.best_cost}")
 
     for i in range(0, 100):
         # run simulated annealing
 
-        new_no_ps, new_budget, new_period = simulated_annealing(tt_wcrt, et_wcrt_groups,tt_schedule, et_bool, cand_sol, params,
-                                                                tt_hyperperiod,tt_schedule_bool)
+        new_no_ps, new_budget, new_period = simulated_annealing(tt_wcrt, et_wcrt_groups, tt_schedule, et_bool, cand_sol,
+                                                                params,
+                                                                tt_hyperperiod, tt_schedule_bool)
         print(f"\nIteration {i}")
         print(f"Iteration {i} SA will be executed with budget of {new_budget} and period of {new_period}")
         print(f"Best cost: {int(params.best_cost)}")
-        print("Best solution:",params.best_solution)
+        print("Best solution:", params.best_solution)
 
-        params.iter=params.iter+1
+        params.iter = params.iter + 1
         # update parameters
         cand_sol = [new_no_ps, new_budget, new_period]
         new_ps = create_poll_src(new_no_ps, new_budget, new_period)
         tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tasks_parser(testcases_path), new_ps)
 
-        if(len(tt_wcrt)==0):
-            tt_schedule_bool=0
+        if len(tt_wcrt) == 0:
+            tt_schedule_bool = 0
             continue
-        else : 
-            tt_schedule_bool=1
-        #if TT set is not schedulable , it will not try to do et_schedule
+        else:
+            tt_schedule_bool = 1
+        # if TT set is not schedulable , it will not try to do et_schedule
         # for task in task_list:
         #    print(f"Name: {task.name}  Duration: {task.duration}  Period: {task.period}  Deadline: {task.deadline}")
-        et_wcrt_groups=[]
-        et_bool_groups=[]
-        for i,et_tasks in enumerate(et_tasks_groups):
+        et_wcrt_groups = []
+        et_bool_groups = []
+        for i, et_tasks in enumerate(et_tasks_groups):
             et_bool, et_wcrt = et_schedule(et_tasks, new_budget[i], new_period[i], new_period[i])
             et_bool_groups.append(et_bool)
             et_wcrt_groups.append(et_wcrt)
-        et_bool=0
-        for bool in et_bool_groups:
-            if (bool==False): 
-                et_bool+=1
-        #et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), new_budget, new_period, new_period)
+        et_bool = 0
+        for bool_var in et_bool_groups:
+            if not bool_var:
+                et_bool += 1
+        # et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), new_budget, new_period, new_period)
 
-    print("No of Servers:",params.best_solution[0],", Budget:",params.best_solution[1],", Period:",params.best_solution[2])
+    print("No of Servers:", params.best_solution[0], ", Budget:", params.best_solution[1], ", Period:",
+          params.best_solution[2])
 
 
 if __name__ == "__main__":
