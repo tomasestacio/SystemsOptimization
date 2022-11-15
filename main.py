@@ -1,14 +1,26 @@
 import pandas as pd
 import numpy as np
 import random
+import math
+import logging
+import os
 import time
+
+log_file = "project_results.log"
+num = 1
+if os.path.exists(log_file):
+    while os.path.exists(f"project_results{num}.log"):
+        num += 1
+log_file = f"project_results{num}.log"
+logging.basicConfig(filename=log_file, filemode='w', format='%(asctime)s %(name)s - %(levelname)s - %(message)s',
+                    level=logging.DEBUG)
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 # set file path for test cases
 # testcases_path = r'C:\Users\tiago\code\git_repos\SystemsOptimization\testcases_seperation_tested'
 testcases_path = "/Users/joaomena/Documents/testcases_seperation"
-
+test_file = "inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv"
 # set default values for SA temperature and cooling
 def_temp = 20
 def_cooling = 0.5
@@ -16,7 +28,7 @@ def_cooling = 0.5
 # set default polling server parameters
 def_no_server = 1
 def_budget = 20
-def_period = 30
+def_period = 25
 
 
 class Task:
@@ -49,7 +61,7 @@ class SimAnnealingParams:
         self.norm_max = norm_max
 
 
-def tasks_parser(path):
+def tasks_parser(path, file):
     """
     get all tasks from the .csv files in the testcases folder and return them as objects in a list
     :param path: path to test cases file
@@ -359,7 +371,15 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, tt_schedule, et_tasks_sche
     :param hyperperiod: hyperperiod of all time triggered tasks including polling server
     :return: new number of polling servers, budget and period randomly generated
     """
+
+    # define limits for generated variables
+    # max_number_poll_servers = 4
+    max_budget_variation = 40
+    max_period_variation = 50
+    # max_number_poll_servers_variation = 2
+
     if tt_schedule_bool == 1:
+
         # calculate cost with the parameters given
         candidate_cost = cost_function(tt_tasks_wcrt, et_tasks_wcrt, et_tasks_sched)
 
@@ -367,9 +387,13 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, tt_schedule, et_tasks_sche
         print(f"Candidate cost: {int(candidate_cost)}")
 
         if candidate_cost < parameters.best_cost:  # update the best solution for lower cost
+
             parameters.best_cost = candidate_cost
             parameters.best_solution = candidate_solution
             parameters.best_schedule = tt_schedule
+            logging.warning(
+                f"NEW best cost for parameters in ITERATION: {parameters.iter}; NUM SERVERS: {candidate_solution[0]}; BUDGET: {candidate_solution[1]}; PERIOD: {candidate_solution[2]}\n"
+                f"resulting in a BEST COST of {int(parameters.best_cost)}")
 
         else:
             print("candidate has a worse solution than the best solution")
@@ -391,11 +415,7 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, tt_schedule, et_tasks_sche
 
     # return the new random changes to have the next candidates
     # we are still going to discuss the boundaries
-    # define limits for generated variables
-    # max_number_poll_servers = 4
-    max_budget_variation = 20
-    max_period_variation = 25
-    # max_number_poll_servers_variation = 2
+
     number_poll_servers = candidate_solution[0]  # number of poll servers is fixed for the dataset
 
     period_poll_servers = []
@@ -404,7 +424,8 @@ def simulated_annealing(tt_tasks_wcrt, et_tasks_wcrt, tt_schedule, et_tasks_sche
         while hyperperiod % period != 0 or period < 1:
             period_poll_servers_variation = np.random.randint(-max_period_variation, max_period_variation, size=1)
             period = parameters.best_solution[2][i] + period_poll_servers_variation
-            if period == 0: period = -1
+            if period == 0:
+                period = -1
 
         period_poll_servers.append(int(period))
 
@@ -439,10 +460,47 @@ def task_seperation(t_list):
     return max_no_ps, min_no_ps
 
 
+def priority_parser(task_list):
+    # reassignement of the priorities of the ET tasks according to the EDF method -> earliest deadline, biggest priority
+    # 1) check the biggest deadline of the ET tasks in the test case
+    # 2) divide that by the number of ET tasks in the test case
+    # 3) assign priorities based on the space division
+
+    et_tasks = []
+    D = []
+    P = []
+
+    for task in task_list:
+        if task.type == "ET":
+            et_tasks.append(task)
+            D.append(task.deadline)
+            P.append(task.priority)
+
+    max_deadline = 0
+
+    for task in et_tasks:
+        if max_deadline < task.deadline:
+            max_deadline = task.deadline
+
+    chunk_size = math.floor(max_deadline / 7)
+
+    for task in et_tasks:
+        for i in range(0, 7):
+            if task.deadline - (i + 1) * chunk_size < 0:
+                task.priority = i
+                break
+
+    return et_tasks
+
+
 def main():
     # create list with an object Task for every task in  the csv files
+    logging.info("Program started, setting initial conditions\n")
     task_list = []
-    task_list = tasks_parser(testcases_path)
+    task_list = tasks_parser(testcases_path, test_file)
+
+    not_sched_tt = 0
+    not_sched_et = 0
 
     # get min / max number of polling servers
     max_no_srv, min_no_srv = task_seperation(task_list)  # we decided to use only the min_no_srv
@@ -461,6 +519,7 @@ def main():
                                                    create_poll_src(min_no_srv, budget_poll_srv, period_poll_srv))
     if len(tt_wcrt) == 0:
         tt_schedule_bool = 0
+        not_sched_tt += 1
     else:
         tt_schedule_bool = 1
         for i, et_tasks in enumerate(et_tasks_groups):
@@ -471,6 +530,7 @@ def main():
     for bool_var in et_bool_groups:
         if not bool_var:
             et_bool += 1
+            not_sched_et += 1
             break
 
     # set simulated annealing initial parameters
@@ -479,18 +539,19 @@ def main():
                                 def_cooling, 10000)
 
     print(f"Initial cost: {params.best_cost}")
-
+    logging.info("Simulated Annealing starting.\n")
+    logging.info(f"Using test case file: {testcases_path}/{test_file}")
     initial_time = time.time()
     curr_time = 0
-    i = 0
-    while params.curr_temp > 0.1 and curr_time < 60:
+    # params.curr_temp > 0.1
+    while curr_time < 120:
         # run simulated annealing
 
         new_no_ps, new_budget, new_period = simulated_annealing(tt_wcrt, et_wcrt_groups, tt_schedule, et_bool, cand_sol,
                                                                 params,
                                                                 tt_hyperperiod, tt_schedule_bool)
-        print(f"\nIteration {i}")
-        print(f"Iteration {i} SA will be executed with budget of {new_budget} and period of {new_period}")
+        print(f"\nIteration {params.iter}")
+        print(f"Iteration {params.iter} SA will be executed with budget of {new_budget} and period of {new_period}")
         print(f"Best cost: {int(params.best_cost)}")
         print("Best solution:", params.best_solution)
 
@@ -498,10 +559,11 @@ def main():
         # update parameters
         cand_sol = [new_no_ps, new_budget, new_period]
         new_ps = create_poll_src(new_no_ps, new_budget, new_period)
-        tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tasks_parser(testcases_path), new_ps)
+        tt_schedule, tt_wcrt, tt_hyperperiod = edf_sim(tasks_parser(testcases_path, test_file), new_ps)
 
         if len(tt_wcrt) == 0:
             tt_schedule_bool = 0
+            not_sched_tt += 1
             continue
         else:
             tt_schedule_bool = 1
@@ -517,9 +579,14 @@ def main():
         et_bool = 0
         for bool_var in et_bool_groups:
             if not bool_var:
+                not_sched_et += 1
                 et_bool += 1
+        curr_time = time.time() - initial_time
         # et_bool, et_wcrt = et_schedule(tasks_parser(testcases_path), new_budget, new_period, new_period)
 
+    logging.info(
+        f"{params.iter} Iterations ran, of which {not_sched_tt} where not schedulable for TT and {not_sched_et}"
+        f" were not schedulable for ET")
     print("No of Servers:", params.best_solution[0], ", Budget:", params.best_solution[1], ", Period:",
           params.best_solution[2])
 
