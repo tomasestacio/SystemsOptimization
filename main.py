@@ -205,7 +205,7 @@ def edf_sim(t_list, ps_array):
 
         t += 1
 
-    i = 0 
+    i = 0
     for task in tt_list:
         if(C[i] > wcrt[i]):
             wcrt[i] = C[i]
@@ -504,7 +504,22 @@ def main():
     max_no_srv, min_no_srv = task_seperation(task_list)  # we decided to use only the min_no_srv
 
     # get groups of et tasks with same separation number
-    et_tasks_groups = et_tasks_seperation(task_list, min_no_srv)
+    first_et_tasks_groups = et_tasks_seperation(task_list, min_no_srv)
+
+    print("FIRST PRIORITIES:")
+    for et_task in first_et_tasks_groups:
+        for task in et_task:
+            print(task.priority)
+
+    et_tasks_groups = []
+    for et_tasks in first_et_tasks_groups:
+        et_tasks_groups.append(priority_parser(et_tasks))
+
+    print("NEW PRIORITIES:")
+    for et_task in et_tasks_groups:
+        for task in et_task:
+            print(task.priority)
+
     et_wcrt = []
     et_bool = 1
     et_wcrt_groups = []
