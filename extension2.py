@@ -7,23 +7,11 @@ import pandas as pd
 import numpy as np
 import math
 
-task_list = tasks_parser("testcases_seperation_tested_modified/testcases_seperation_tested")
-
-def ET_ext2(task_list):
+def ET_ext2(et_tasks):
     # reassignement of the priorities of the ET tasks according to the EDF method -> earliest deadline, biggest priority
     # 1) check the biggest deadline of the ET tasks in the test case
     # 2) divide that by the number of ET tasks in the test case
     # 3) assign priorities based on the space division 
-
-    et_tasks = []
-    D = []
-    P = []
-
-    for task in task_list:
-        if(task.type == "ET"):
-            et_tasks.append(task)
-            D.append(task.deadline)
-            P.append(task.priority)
 
     max_deadline = 0
 
@@ -39,4 +27,5 @@ def ET_ext2(task_list):
                 task.priority = i
                 break
 
-ET_ext2(task_list)
+    return et_tasks
+
