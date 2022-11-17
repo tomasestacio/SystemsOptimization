@@ -214,6 +214,7 @@ def edf_sim(t_list, ps_array):
     return sigma, wcrt, T
 
 
+
 def edf(tt_tasks):
     """
     get the name of the task with the earliest absolute deadline
@@ -460,22 +461,11 @@ def task_seperation(t_list):
     return max_no_ps, min_no_ps
 
 
-def priority_parser(task_list):
-    # reassignement of the priorities of the ET tasks according to the EDF method -> earliest deadline, biggest priority
+def priority_parser(et_tasks):
+    # reassignment of the priorities of the ET tasks according to the EDF method -> earliest deadline, biggest priority
     # 1) check the biggest deadline of the ET tasks in the test case
     # 2) divide that by the number of ET tasks in the test case
     # 3) assign priorities based on the space division
-
-    et_tasks = []
-    D = []
-    P = []
-
-    for task in task_list:
-        if task.type == "ET":
-            et_tasks.append(task)
-            D.append(task.deadline)
-            P.append(task.priority)
-
     max_deadline = 0
 
     for task in et_tasks:
