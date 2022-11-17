@@ -205,10 +205,18 @@ def edf_sim(t_list, ps_array):
 
         t += 1
 
+    i = 0 
     for task in tt_list:
+        if(C[i] > wcrt[i]):
+            wcrt[i] = C[i]
+
+        i += 1
+
         if task.duration > 0:
             print("Schedule is infeasible")
             return [], [], T
+
+
     # print(f"tt wcrt: {wcrt}")
     print(f"TRUE tt wcrt:{wcrt}")
     return sigma, wcrt, T
