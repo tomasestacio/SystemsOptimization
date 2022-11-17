@@ -8,7 +8,7 @@ import glob
 import pandas as pd
 import numpy as np
 
-task_list = tasks_parser("test cases/test cases")
+task_list = tasks_parser("testcases_seperation_tested_modified/testcases_seperation_tested")
 
 #choosing the task with earliest absolute deadline
 def EDF(tt_tasks):
@@ -98,11 +98,19 @@ def edf_sim(task_list):
 
         t += 1
 
+    i = 0
     for task in tt_tasks:
+        if(C[i] > wcrt[i]):
+            wcrt[i] = C[i]
+
+        i += 1
+
         if(task.duration > 0):
             print("Schedule is infeasible")
             sigma = []
             return sigma
+
+
 
     #print("Schedule table = ", sigma)
     print("WCRT table = ", wcrt)
