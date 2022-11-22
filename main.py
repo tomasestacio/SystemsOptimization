@@ -64,6 +64,7 @@ class SimAnnealingParams:
 def tasks_parser(path, file):
     """
     get all tasks from the .csv files in the testcases folder and return them as objects in a list
+    :param file: specific test case file in path
     :param path: path to test cases file
     :return: list of Task objects with all tasks found
     """
@@ -73,7 +74,7 @@ def tasks_parser(path, file):
         sep=';').to_dict(orient="index")  # read single .csv file and separate columns by ';' """
 
     df = pd.read_csv(
-        f'{path}/inf_10_10/taskset__1643188013-a_0.1-b_0.1-n_30-m_20-d_unif-p_2000-q_4000-g_1000-t_5__0__tsk.csv',
+        f'{path}/{file}',
         sep=';').to_dict(orient="index")  # read single .csv file and separate columns by ';'
     task_list = []
     for task in df:
